@@ -1,0 +1,665 @@
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'model/entity/News.dart';
+
+class NewsList extends StatefulWidget {
+  const NewsList({super.key});
+
+  @override
+  _NewsListState createState() => _NewsListState();
+}
+
+class _NewsListState extends State<NewsList> {
+  List<News> _newsList = []; // 初始为空列表
+
+  // 异步函数，获取新闻数据
+  Future<List<News>> fetchNews() async {
+    final response = await http.get(
+      Uri.parse('https://apis.tianapi.com/generalnews/index?key=1630664ff95a87a28a6b2ff27dd4f565&rand=1'),
+    );
+
+    if (response.statusCode == 200) {
+      Map<String, dynamic> data = json.decode(response.body);
+      List<dynamic> newsList = data['result']['newslist'];
+
+      return newsList.map((news) => News.fromJson(news)).toList();
+    } else {
+      throw Exception('获取新闻失败');
+    }
+  }
+
+  // 下拉刷新方法
+  Future<void> _onRefresh() async {
+    List<News> newNews = await fetchNews();
+    for(int i=0;i<newNews.length;i++){
+      print(newNews[i].picUrl);
+    }
+    setState(() {
+      _newsList.insertAll(0, newNews); // 将新获取的新闻添加到列表的前面
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // 初次加载新闻
+    fetchNews().then((newsList) {
+      setState(() {
+        _newsList = newsList;
+      });
+    });
+  }
+
+  // 判断 URL 是否有效
+  Future<bool> _isValidImageUrl(String url) async {
+    try {
+      final response = await http.head(Uri.parse(url));
+      return response.statusCode == 200; // 如果返回状态码是200，表示URL有效
+    } catch (e) {
+      return false; // 如果请求失败，表示URL无效
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return RefreshIndicator(
+      onRefresh: _onRefresh, // 下拉刷新触发的回调
+      child: ListView.builder(
+        itemCount: _newsList.length,
+        itemBuilder: (context, index) {
+          News news = _newsList[index];
+          return Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 标题
+                Text(
+                  news.title,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+                SizedBox(height: 8), // 标题和描述之间的间距
+                // 描述
+                Text(
+                  news.description ?? '无描述',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.black54,
+
+                  ),
+                  maxLines: 2,
+                ),
+                SizedBox(height: 8), // 描述和图片之间的间距
+                // 判断是否有有效的图片链接
+                news.picUrl.isNotEmpty
+                    ? FutureBuilder<bool>(
+                  future: _isValidImageUrl(news.picUrl),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return CircularProgressIndicator(); // 如果正在检查URL，显示加载指示器
+                    }
+
+                    if (snapshot.hasError || !snapshot.data!) {
+                      return Container(); // 如果图片无法访问，隐藏图片
+                    }
+
+                    return Container(
+                      width: MediaQuery.of(context).size.width, // 图片宽度
+                      child: Image.network(
+                        news.picUrl,
+                        height: 200, // 可以调整图片的高度
+                        fit: BoxFit.cover, // 确保图片适应容器
+
+                      ),
+                    );
+                  },
+                )
+                    : Container(), // 如果没有图片链接，不显示任何内容
+                SizedBox(height: 8), // 图片下方的间距
+                // 使用 Row 在同一行显示 source 和 ctime
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '来源: ${news.source}',
+                      style: TextStyle(
+                        color: Colors.grey,
+                        fontSize: 14,
+                      ),
+                    ),
+                    Text(
+                      '发布时间: ${news.ctime}', // 假设 News 类有 ctime 字段
+                      style: TextStyle(
+                        color: Colors.grey,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 16), // 每条新闻之间的间距
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+//Newslist
+
+import 'dart:convert';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'model/entity/News.dart';
+import 'NewsDetailPage.dart';
+
+class NewsList extends StatefulWidget {
+  const NewsList({super.key});
+
+  @override
+  _NewsListState createState() => _NewsListState();
+}
+
+class _NewsListState extends State<NewsList> {
+  List<News> _newsList = [];
+  bool _isLoading = true;
+  Future<List<News>> fetchNews() async {
+    final response = await http.get(
+      //Uri.parse('https://apis.tianapi.com/generalnews/index?key=1630664ff95a87a28a6b2ff27dd4f565&page=5'),
+     // Uri.parse('https://whyta.cn/api/tx/generalnews?key=cc8cba0a7069&rand=1'),
+      //
+      Uri.parse('https://apis.tianapi.com/caijing/index?key=1630664ff95a87a28a6b2ff27dd4f565&rand=1'),
+    );
+
+    if (response.statusCode == 200) {
+      Map<String, dynamic> data = json.decode(response.body);
+      List<dynamic> newsList = data['result']['newslist'];
+
+      return newsList.map((news) => News.fromJson(news)).toList();
+    } else {
+      throw Exception('获取新闻失败');
+    }
+  }
+
+  Future<void> _onRefresh() async {
+
+    List<News> newNews = await fetchNews();
+    for(int i=0;i<newNews.length;i++){
+      newNews[i].picUrl=_fixUrl(newNews[i].picUrl);
+      newNews[i].url=_fixUrl(newNews[i].url);
+      print(newNews[i].title+" "+newNews[i].url+"图片:"+newNews[i].picUrl);
+    }
+    setState(() {
+      _newsList.insertAll(0, newNews);
+
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    fetchNews().then((newNews) {
+      for(int i=0;i<newNews.length;i++){
+        newNews[i].picUrl=_fixUrl(newNews[i].picUrl);
+        newNews[i].url=_fixUrl(newNews[i].url);
+        print(newNews[i].title+" "+newNews[i].url+"图片:"+newNews[i].picUrl);
+      }
+      setState(() {
+        _newsList = newNews;
+        _isLoading = false;
+      });
+    });
+  }
+
+  Future<bool> _isValidImageUrl(String url) async {
+    //print("purl "+url);
+    try {
+      final response = await http.head(Uri.parse(url));
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return RefreshIndicator(
+      onRefresh: _onRefresh,
+      color: Colors.blue,
+      backgroundColor: Colors.white,
+      child: _isLoading?Container(color: Colors.white,child: Center(child: CircularProgressIndicator()),)
+      :ListView.builder(
+        itemCount: _newsList.length,
+        itemBuilder: (context, index) {
+          News news = _newsList[index];
+
+
+          //print(news.title+" "+news.url+"图片:"+news.picUrl);
+          return Container(
+            color: Colors.white,
+            child: InkWell(
+              onTap: () {
+                // 点击新闻后跳转到 NewsDetailPage
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => NewsDetailPage(
+                      url: news.url,  // 传递新闻的 URL
+                      title: news.title,  // 传递新闻的标题
+                    ),
+                  ),
+                );
+              },
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      news.title,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    if(news.description.isNotEmpty)
+                    Text(
+                      news.description ,
+                      style: TextStyle(fontSize: 14, color: Colors.black54),
+                      maxLines: 2,
+                    ),
+                    SizedBox(height: 8),
+                    news.picUrl.isNotEmpty
+                        ? FutureBuilder<bool>(
+                      future: _isValidImageUrl(news.picUrl),
+                      builder: (context, snapshot) {//future完成会再次回调
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return CircularProgressIndicator();
+                        }
+                        if (snapshot.hasError || !snapshot.data!) {//future结果
+                          return Container();
+                        }
+                        return genNetImg(news);
+                      },
+                    )
+                        : Container(),
+                    SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          '来源: ${news.source}',
+                          style: TextStyle(color: Colors.grey, fontSize: 14),
+                        ),
+                        Text(
+                          '发布时间: ${news.ctime}',
+                          style: TextStyle(color: Colors.grey, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 16),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+  String _fixUrl(String url) {
+    if(url.isEmpty)return url;
+
+    if (url.startsWith('https')||url.startsWith('http')) {
+      return url;
+    }else{
+      return 'https:' + url;
+    }
+
+  }
+
+  Widget genNetImg(News news) {
+    return CachedNetworkImage(
+      imageUrl: news.picUrl,
+      placeholder: (context, url) => CircularProgressIndicator(),
+      errorWidget: (context, url, error) => Icon(Icons.error),
+      fit: BoxFit.cover,
+    );
+    // return Image.network(
+    //     news.picUrl,
+    //     //height: 200,
+    //     fit: BoxFit.cover,
+    //     cacheWidth: 500
+    // );
+  }
+}
+
+
+//newsdetail
+import 'package:flutter/material.dart';
+import 'package:webview_flutter/webview_flutter.dart';
+
+class NewsDetailPage extends StatefulWidget {
+  final String url;
+  final String title;
+
+  NewsDetailPage({required this.url, required this.title});
+
+  @override
+  _NewsDetailPageState createState() => _NewsDetailPageState();
+}
+
+class _NewsDetailPageState extends State<NewsDetailPage> {
+  late final WebViewController _controller;
+  double _progress = 0.0;
+  bool _showProgressIndicator = true; // 是否显示加载条
+
+  @override
+  void initState() {
+    super.initState();
+    // 初始化 WebViewController
+    _controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onProgress: (int progress) {
+            setState(() {
+              _progress = progress / 100;
+              _showProgressIndicator = progress < 100; // 加载完毕后隐藏进度条
+            });
+          },
+          onPageStarted: (String url) {},
+          onPageFinished: (String url) {},
+          onHttpError: (HttpResponseError error) {},
+          onWebResourceError: (WebResourceError error) {},
+        ),
+      )
+      ..loadRequest(Uri.parse(widget.url));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        scrolledUnderElevation: 0.0,
+        backgroundColor: const Color.fromRGBO(240, 244, 255, 1),
+        title: Text(widget.title),
+      ),
+      body: Column(
+        children: [
+          // 显示进度条
+          _showProgressIndicator
+              ? LinearProgressIndicator(
+            minHeight: 2,
+            value: _progress, // 设置进度
+            backgroundColor: Colors.grey[300]!,
+            valueColor: const AlwaysStoppedAnimation<Color>(Colors.blue),
+          )
+              : const SizedBox(), // 加载完成后隐藏进度条
+          Expanded(
+            child: WebViewWidget(controller: _controller),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
+//newslist
+import 'dart:convert';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:logger/logger.dart';
+import 'model/entity/News.dart';
+import 'NewsDetailPage.dart';
+
+class NewsList extends StatefulWidget {
+  const NewsList({super.key});
+
+  @override
+  _NewsListState createState() => _NewsListState();
+}
+
+class _NewsListState extends State<NewsList> {
+  List<News> _newsList = [];
+  bool _isLoading = true;
+  var logger = Logger();
+
+  Future<List<News>> fetchNews() async {
+    final response = await http.get(
+      Uri.parse('https://apis.tianapi.com/generalnews/index?key=1630664ff95a87a28a6b2ff27dd4f565&rand=1&num=5'),
+      //Uri.parse('https://apis.tianapi.com/caijing/index?key=1630664ff95a87a28a6b2ff27dd4f565&num=5&rand=1'),
+    );
+
+    if (response.statusCode == 200) {
+      logger.i("获取新闻信息成功");
+      Map<String, dynamic> data = json.decode(response.body);
+      List<dynamic> newsList = data['result']['newslist'];
+      return newsList.map((news) => News.fromJson(news)).toList();
+    } else {
+      throw Exception('获取新闻失败');
+    }
+  }
+  Future<List<News>> fetchNewsWithValidEntries() async {
+    int requiredCount=5;
+    List<News> newsList = [];
+    while (newsList.length < requiredCount) {
+      List<News> newFetchedNews = await fetchNewsPre();
+      newsList.addAll(newFetchedNews);
+      // 去除重复新闻
+      newsList = newsList.toSet().toList();
+      if (newsList.length >= requiredCount) {
+        return newsList.take(requiredCount).toList(); // 保证返回条数不超过 requiredCount
+      }
+    }
+    return newsList;
+  }
+  Future<List<News>> fetchNewsPre() async {
+    final response = await http.get(
+      Uri.parse('https://apis.tianapi.com/generalnews/index?key=1630664ff95a87a28a6b2ff27dd4f565&rand=1&num=5'),
+      //
+    //   Uri.parse('https://apis.tianapi.com/caijing/index?key=1630664ff95a87a28a6b2ff27dd4f565&num=5&rand=1'),
+     // Uri.parse('https://apis.tianapi.com/internet/index?key=1630664ff95a87a28a6b2ff27dd4f565&num=5&rand=1'),
+    );
+
+    if (response.statusCode == 200) {
+      logger.i("获取新闻信息成功");
+      Map<String, dynamic> data = json.decode(response.body);
+      List<dynamic> newsList = data['result']['newslist'];
+      List<News> validNewsList = [];
+      for (var newsJson in newsList) {
+        News news = News.fromJson(newsJson);
+        news.url = _fixUrl(news.url);
+        //if (await _isValidUrl(news.url)) {
+        if (true) {
+          validNewsList.add(news);
+        } else {
+          logger.w("无效新闻链接：${news.title} ${news.url}");
+        }
+      }
+      return validNewsList;
+    } else {
+      throw Exception('获取新闻失败');
+    }
+  }
+  Future<bool> _isValidUrl(String url) async {
+    try {
+      final response = await http.get(Uri.parse(url));
+      return response.statusCode == 200;
+    } catch (e) {
+      logger.e("URL 检查失败: $url");
+      return false;
+    }
+  }
+  // 刷新新闻列表
+  Future<void> _onRefresh() async {
+    List<News> newNews = await fetchNewsWithValidEntries();
+    for (int i = 0; i < newNews.length; i++) {
+
+      newNews[i].picUrl = _fixUrl(newNews[i].picUrl);
+      newNews[i].url = _fixUrl(newNews[i].url);
+      News news=newNews[i];
+      print(news.title+" "+news.url+"图片:"+news.picUrl);
+    }
+    setState(() {
+       _newsList.insertAll(0, newNews);
+     // _newsList = newNews;
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    fetchNewsWithValidEntries().then((newNews) {
+      for (int i = 0; i < newNews.length; i++) {
+
+        newNews[i].picUrl = _fixUrl(newNews[i].picUrl);
+        newNews[i].url = _fixUrl(newNews[i].url);
+        News news=newNews[i];
+        print(news.title+" "+news.url+"图片:"+news.picUrl);
+      }
+      setState(() {
+        _newsList = newNews;
+        _isLoading = false;
+      });
+    });
+  }
+
+  //处理URL
+  String _fixUrl(String url) {
+    if (url.isEmpty) return url;
+
+    if (url.startsWith('https') || url.startsWith('http')) {
+      return url;
+    } else {
+      return 'https:' + url;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return RefreshIndicator(
+      onRefresh: _onRefresh,
+      color: Colors.blue,
+      backgroundColor: Colors.white,
+      child: _isLoading
+          ? Container(
+        color: Colors.white,
+        child: Center(child: CircularProgressIndicator()),
+      )
+          : ListView.builder(
+          itemCount: _newsList.length,
+          itemBuilder: (context, index) {
+          News news = _newsList[index];
+          return Container(
+            color: Colors.white,
+            child: InkWell(
+              onTap: () {
+                // 点击新闻后跳转到 NewsDetailPage
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => NewsDetailPage(
+                      url: news.url,
+                      title: news.title,
+                    ),
+                  ),
+                );
+              },
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      news.title,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    if (news.description.isNotEmpty)
+                      Text(
+                        news.description,
+                        style: TextStyle(fontSize: 14, color: Colors.black54),
+                        maxLines: 2,
+                      ),
+                    SizedBox(height: 8),
+
+                      genMetImg(news.picUrl),
+                    SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          '来源: ${news.source}',
+                          style: TextStyle(color: Colors.grey, fontSize: 14),
+                        ),
+                        Text(
+                          '发布时间: ${news.ctime}',
+                          style: TextStyle(color: Colors.grey, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 16),
+
+
+                    if(index!=_newsList.length-1)
+                      Divider(
+                      color: Color.fromRGBO(241,241,241, 1),
+                      height: 1,
+                      thickness: 1,
+                      indent: 10,
+                      endIndent: 10,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget genMetImg(String picUrl) {
+    if(picUrl==null||picUrl.isEmpty){
+      logger.e("图片url为空");
+      return Icon(
+        Icons.broken_image,
+        size: 50,
+        color: Colors.grey,
+      );
+    }
+
+    return CachedNetworkImage(
+      imageUrl: picUrl,
+      placeholder: (context, url) =>
+          CircularProgressIndicator(),
+        errorWidget: (context, url, error){
+        // Icon(Icons.error),
+          logger.e("加载失败图片 URL: $url");
+
+        return Icon(
+          Icons.broken_image,
+          size: 50,
+          color: Colors.grey,
+        );
+
+      },
+
+      fit: BoxFit.fill,
+    );
+  }
+}
