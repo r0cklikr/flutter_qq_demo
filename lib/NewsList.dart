@@ -20,7 +20,7 @@ class _NewsListState extends State<NewsList> {
   List<News> _newsList = [];
   bool _isLoading = true;
   var logger = Logger();
-
+  bool _isNetworkError = false; // 添加网络异常标志位
   Future<List<News>> fetchNews() async {
     final response = await http.get(
       Uri.parse('https://apis.tianapi.com/generalnews/index?key=1630664ff95a87a28a6b2ff27dd4f565&rand=1&num=5'),
@@ -46,11 +46,13 @@ class _NewsListState extends State<NewsList> {
       for (var news in newsList) {
         await dbHelper.insertNews(news);
       }
-      logger.i("当前有${dbHelper.printAllRecords("news")}条");
+
+      _isNetworkError = false; // 网络请求成功，清除异常标志
     }  on SocketException catch (e) {
       // 专门捕获无网络时的异常
       logger.e("网络连接失败: 无法访问网络，原因: ${e.message}");
       // 从数据库加载新闻
+      _isNetworkError = true; // 标记为网络异常
       newsList = await dbHelper.getRandomNews(5);
     }
     return newsList;
@@ -233,39 +235,79 @@ class _NewsListState extends State<NewsList> {
         color: Colors.grey,
       );
     }
-    return  CachedNetworkImage(
-        imageUrl: picUrl,
-        placeholder: (context, url) =>
-            CircularProgressIndicator(),
-          errorWidget: (context, url, error){
-            logger.e("加载失败图片 URL: $url");
-            return FutureBuilder<Uint8List?>(
-              future: _getImageFromDatabase(picUrl),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return CircularProgressIndicator(); // 数据库加载时显示进度条
-                } else if (snapshot.hasData && snapshot.data != null) {
-                    logger.i("从数据库获取图片");
-                  return Image.memory(snapshot.data!);  // 从数据库加载的图片
-                } else {
-                  return Icon(
-                    Icons.broken_image,
-                    size: 50,
-                    color: Colors.grey,
-                  ); // 图片加载失败时显示默认图标
-                }
-              },
+    if (_isNetworkError) {
+      // 如果网络异常，从数据库加载图片
+      return FutureBuilder<Uint8List?>(
+        future: _getImageFromDatabase(picUrl),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return CircularProgressIndicator();
+          } else if (snapshot.hasData && snapshot.data != null) {
+            logger.i("从数据库加载图片成功");
+            return Image.memory(
+              snapshot.data!,
+              fit: BoxFit.fill,
             );
-          // return Icon(
-          //   Icons.broken_image,
-          //   size: 50,
-          //   color: Colors.grey,
-          // );
-
+          } else {
+            logger.w("从数据库加载图片失败");
+            return Icon(
+              Icons.broken_image,
+              size: 50,
+              color: Colors.grey,
+            );
+          }
         },
-
+      );
+    } else {
+      // 如果网络正常，使用 CachedNetworkImage
+      return CachedNetworkImage(
+        imageUrl: picUrl,
+        placeholder: (context, url) => CircularProgressIndicator(),
+        errorWidget: (context, url, error) {
+          logger.e("加载网络图片失败，URL: $url");
+          return Icon(
+            Icons.broken_image,
+            size: 50,
+            color: Colors.grey,
+          );
+        },
         fit: BoxFit.fill,
       );
+    }
+  }
+    // return  CachedNetworkImage(
+    //     imageUrl: picUrl,
+    //     placeholder: (context, url) =>
+    //         CircularProgressIndicator(),
+    //       errorWidget: (context, url, error){
+    //         logger.e("加载失败图片 URL: $url");
+    //         return FutureBuilder<Uint8List?>(
+    //           future: _getImageFromDatabase(picUrl),
+    //           builder: (context, snapshot) {
+    //             if (snapshot.connectionState == ConnectionState.waiting) {
+    //               return CircularProgressIndicator(); // 数据库加载时显示进度条
+    //             } else if (snapshot.hasData && snapshot.data != null) {
+    //                 logger.i("从数据库获取图片");
+    //               return Image.memory(snapshot.data!);  // 从数据库加载的图片
+    //             } else {
+    //               return Icon(
+    //                 Icons.broken_image,
+    //                 size: 50,
+    //                 color: Colors.grey,
+    //               ); // 图片加载失败时显示默认图标
+    //             }
+    //           },
+    //         );
+    //       // return Icon(
+    //       //   Icons.broken_image,
+    //       //   size: 50,
+    //       //   color: Colors.grey,
+    //       // );
+    //
+    //     },
+    //
+    //     fit: BoxFit.fill,
+    //   );
 
     // return CachedNetworkImage(
     //   imageUrl: picUrl,
@@ -285,7 +327,7 @@ class _NewsListState extends State<NewsList> {
     //
     //   fit: BoxFit.fill,
     // );
-  }
+
   Future<Uint8List?> _getImageFromDatabase(String picUrl) async {
     final dbHelper = DBHelper();
     return await dbHelper.getImageDataFromDatabase(picUrl);

@@ -91,7 +91,7 @@ class DBHelper {
 
   // 获取图片二进制数据
   Future<Uint8List?> getImageDataFromDatabase(String picUrl) async {
-    printAllRecords("news");
+    //printAllRecords("news");
     final db = await database;
     final List<Map<String, dynamic>> result = await db.query(
       'news',

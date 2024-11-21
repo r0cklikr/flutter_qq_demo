@@ -51,7 +51,9 @@ class _LoginScreenState extends State<LoginScreen> {
       if (savedAccount != null && savedPassword != null) {
         qqController.text = savedAccount;
         passwordController.text = savedPassword;
-        _isCheckedRemember = true;
+        setState(() {
+          _isCheckedRemember = true;  // 正确更新复选框的状态
+        });
       }
     }
   }

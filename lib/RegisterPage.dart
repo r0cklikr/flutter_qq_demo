@@ -70,6 +70,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
               ),
               const SizedBox(height: 24.0),
+
               // 用户名输入框
               _buildInputField(
                 label: '用户名',
