@@ -24,4 +24,7 @@ class User{
   void setPasswd(String passwd){
     this._passwd=passwd;
   }
+  void setUserName(String username){
+    this._userName=username;
+  }
 }

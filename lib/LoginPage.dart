@@ -216,7 +216,7 @@ class _LoginScreenState extends State<LoginScreen> {
               },
             ),
 
-            Text('记住密码',style: TextStyle(fontSize: 13),),
+            Text('记住密码',style: TextStyle(fontSize: 11),),
           ],
         ),
       ],
@@ -316,9 +316,25 @@ class _LoginScreenState extends State<LoginScreen> {
           prefs.remove('rememAccount');
           prefs.remove('rememPasswd');
         }
+        // 从缓存中获取用户列表
+        String? usersJson = prefs.getString('users');
+        if (usersJson == null || usersJson.isEmpty) {
+          return null; // 如果没有用户数据，返回 null
+        }
+
+        List<dynamic> usersList = json.decode(usersJson);
+
+        // 根据账号和密码查找用户
+        var matchedUser = usersList.firstWhere(
+              (user) => user['username'] == account && user['password'] == passwd,
+          orElse: () => null,
+        );
+        logger.i("缓存中获取到昵称:${matchedUser['nickname']}");
+        User user=getLoginUser(account,passwd);
+        user.setUserName(matchedUser['nickname']);
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => MyMainPage(user: getLoginUser(account,passwd))),
+          MaterialPageRoute(builder: (context) => MyMainPage(user: user)),
         );
       }else{
         showDialog(

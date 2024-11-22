@@ -15,6 +15,8 @@ class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
+  final TextEditingController _nicknameController = TextEditingController();
+
   var logger = Logger();
 
   bool _isUsernameValid = false;
@@ -23,7 +25,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
   void _validateUsername(String username) {
     setState(() {
-      _isUsernameValid = username.isNotEmpty && username.length >= 4;
+      _isUsernameValid = username.isNotEmpty && username.length >= 6&& username.length <=13;
     });
   }
 
@@ -70,11 +72,22 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
               ),
               const SizedBox(height: 24.0),
+            // 昵称输入框
+
+              _buildInputField(
+                label: '昵称',
+                hintText: '请输入昵称',
+                controller: _nicknameController,
+              ),
+              Divider(
+                color: Color.fromRGBO(238, 238, 238, 1),
+                thickness: 1,
+              ),
 
               // 用户名输入框
               _buildInputField(
-                label: '用户名',
-                hintText: '请输入用户名',
+                label: 'QQ号',
+                hintText: '请输入QQ号',
                 controller: _usernameController,
                 onChanged: (value) => _validateUsername(value),
               ),
@@ -168,11 +181,11 @@ class _RegisterPageState extends State<RegisterPage> {
     bool obscureText = false,
   }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 1.0),
       child: Row(
         children: [
           Text(label, style: const TextStyle(fontSize: 16)),
-          (label=="密码"?SizedBox(width: 47,):label=="用户名"?SizedBox(width: 26,):SizedBox(width: 8,)),
+          (label=="密码"?SizedBox(width: 47,):label=="QQ号"?SizedBox(width: 26,):label=='昵称'?SizedBox(width: 36,):SizedBox(width: 8,)),
           Expanded(
             child: TextField(
               controller: controller,
@@ -210,16 +223,24 @@ class _RegisterPageState extends State<RegisterPage> {
   Future<void> _register() async {
     String username = _usernameController.text;
     String password = _passwordController.text;
-    if(username.length<6||username.length>13){
-      _showDialog('错误', '用户名需要在6-13');
+    String nickname = _nicknameController.text;
+
+    if (username.length < 6 || username.length > 13) {
+      _showDialog('错误', '用户名需要在6-13个字符之间');
       return;
     }
     if (password != _confirmPasswordController.text) {
       _showDialog('错误', '两次输入的密码不一致');
       return;
     }
+    if (nickname.isEmpty) {
+      _showDialog('错误', '昵称不能为空');
+      return;
+    }
 
     SharedPreferences prefs = await SharedPreferences.getInstance();
+    //TODO
+    //await prefs.remove('users');
     String? usersJson = prefs.getString('users');
     List<dynamic> usersList = usersJson != null ? json.decode(usersJson) : [];
 
@@ -228,14 +249,19 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
-    usersList.add({'username': username, 'password': password});
+    usersList.add({
+      'username': username,
+      'password': password,
+      'nickname': nickname,
+    });
     prefs.setString('users', json.encode(usersList));
-    logger.i('注册成功: $username');
+    logger.i('注册成功: $username (昵称: $nickname)');
 
     _showDialog('成功', '注册成功！', onConfirm: () {
       Navigator.pop(context);
     });
   }
+
 
   void _showDialog(String title, String content, {VoidCallback? onConfirm}) {
     showDialog(
