@@ -235,7 +235,7 @@ class _NewsListState extends State<NewsList> {
         color: Colors.grey,
       );
     }
-      // 如果网络正常，使用 CachedNetworkImage
+
       return CachedNetworkImage(
         imageUrl: picUrl,
         placeholder: (context, url) => CircularProgressIndicator(),

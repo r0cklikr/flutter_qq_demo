@@ -140,6 +140,14 @@ class DBHelper {
       whereArgs: [url],
     );
   }
+
+  Future<void> deleteNewsAll() async {
+    final db = await database;
+    // 使用url作为条件删除新闻记录
+    await db.delete(
+      'news'
+    );
+  }
   Future<News?> getNewsByUrl(String url) async {
     final db = await database;
     final List<Map<String, dynamic>> result = await db.query(
