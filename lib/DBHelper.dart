@@ -118,6 +118,38 @@ class DBHelper {
       }
     }
   }
+// 更新指定URL的新闻记录
+  Future<void> updateNewsByUrl(News updatedNews) async {
+    final db = await database;
+    // 使用url作为条件更新新闻记录
+    await db.update(
+      'news',
+      updatedNews.toMap(),
+      where: 'url = ?',
+      whereArgs: [updatedNews.url],
+    );
+  }
 
-
+  // 删除指定URL的新闻记录
+  Future<void> deleteNewsByUrl(String url) async {
+    final db = await database;
+    // 使用url作为条件删除新闻记录
+    await db.delete(
+      'news',
+      where: 'url = ?',
+      whereArgs: [url],
+    );
+  }
+  Future<News?> getNewsByUrl(String url) async {
+    final db = await database;
+    final List<Map<String, dynamic>> result = await db.query(
+      'news',
+      where: 'url = ?',
+      whereArgs: [url],
+    );
+    if (result.isNotEmpty) {
+      return News.fromMap(result.first);
+    }
+    return null; // 如果没有找到对应的新闻，返回 null
+  }
 }

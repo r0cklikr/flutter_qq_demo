@@ -1,30 +1,94 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:demohello/main.dart';
+import 'package:demohello/DBHelper.dart';
+import 'package:demohello/model/entity/News.dart'; // 引入 News 类
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  // 插入新闻
+  test('插入新闻到数据库', () async {
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    final dbHelper = DBHelper();
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    // 创建一个测试新闻对象
+    final news = News(
+      id: '1',
+      title: '测试新闻',
+      description: '这是测试新闻描述',
+      url: 'https://example.com',
+      picUrl: 'https://example.com/pic.jpg',
+      source: '新闻源',
+      ctime: '2024-11-22T10:00:00',
+    );
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // 插入新闻
+    await dbHelper.insertNews(news);
+
+  });
+
+  // 查询所有新闻记录
+  test('查询所有新闻记录', () async {
+    final dbHelper = DBHelper();
+
+    dbHelper.printAllRecords("news");
+
+
+  });
+
+  // 更新新闻
+  test('更新新闻', () async {
+    final dbHelper = DBHelper();
+
+    // 创建一个新闻对象
+    final news = News(
+      id: '1',
+      title: '测试新闻',
+      description: '这是测试新闻描述',
+      url: 'https://example.com',
+      picUrl: 'https://example.com/pic.jpg',
+      source: '新闻源',
+      ctime: '2024-11-22T10:00:00',
+    );
+
+    // 插入新闻
+    await dbHelper.insertNews(news);
+
+    // 更新新闻内容
+    final updatedNews = News(
+      id: '1',
+      title: '更新后的测试新闻',
+      description: '这是更新后的测试新闻描述',
+      url: 'https://example.com',
+      picUrl: 'https://example.com/pic.jpg',
+      source: '更新后的新闻源',
+      ctime: '2024-11-22T10:00:00',
+    );
+
+    // 更新新闻
+    await dbHelper.updateNewsByUrl(updatedNews);
+
+    dbHelper.printAllRecords("news");
+  });
+
+  // 删除新闻
+  test('删除新闻', () async {
+    final dbHelper = DBHelper();
+
+    // 创建一个新闻对象
+    final news = News(
+      id: '1',
+      title: '测试新闻',
+      description: '这是测试新闻描述',
+      url: 'https://example.com',
+      picUrl: 'https://example.com/pic.jpg',
+      source: '新闻源',
+      ctime: '2024-11-22T10:00:00',
+    );
+
+    // 插入新闻
+    await dbHelper.insertNews(news);
+
+    // 删除新闻
+    await dbHelper.deleteNewsByUrl(news.url);
+    dbHelper.printAllRecords("news");
+
   });
 }

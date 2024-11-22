@@ -1,115 +1,125 @@
+import 'dart:typed_data';
+import 'package:flutter/material.dart';
+import 'package:demohello/DBHelper.dart'; // 确保 DBHelper 已经实现
+import 'package:demohello/model/entity/News.dart'; // 引入 News 类
 
-
-import 'package:sqflite/sqflite.dart';
-
-Database? _database;
-
-// 获取数据库实例
-Future<Database> get database async {
-  if (_database != null) return _database!;
-  // 如果数据库为空，先初始化数据库
-  _database = await _initDatabase();
-  return _database!;
+class DbTestPage extends StatefulWidget {
+  @override
+  _DbTestPageState createState() => _DbTestPageState();
 }
 
-// 初始化数据库
-Future<Database> _initDatabase() async {
-  final dbPath = await getDatabasesPath();
-  String path = dbPath+'students.db';
-  return await openDatabase(path, version: 1, onCreate: (db, version) {
-    // 创建学生表
-    db.execute('''
-        CREATE TABLE students(
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          name TEXT,
-          age INTEGER,
-          grade TEXT
-        )
-      ''');
-  });
+class _DbTestPageState extends State<DbTestPage> {
+  // 这个变量用于保存查询到的新闻列表
+  List<News> newsList = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchNews();
+  }
+
+  // 从数据库中获取新闻
+  void _fetchNews() async {
+    final dbHelper = DBHelper();
+    final news = await dbHelper.getNewsByUrl('https://example.com'); // 获取所有新闻
+    setState(() {
+
+      if(news!=null)
+      newsList = [news]; // 更新 UI
+      else newsList=[];
+    });
+  }
+
+  // 插入新闻
+  void _insertNews() async {
+    final dbHelper = DBHelper();
+    final news = News(
+      id: '31',
+      title: '测试新闻',
+      description: '这是测试新闻描述',
+      url: 'https://example.com',
+      picUrl: 'https://example.com/pic.jpg',
+      source: '新闻源',
+      ctime: '2024-11-22T10:00:00',
+    );
+    await dbHelper.insertNews(news); // 插入新闻
+    _fetchNews(); // 插入后重新获取新闻
+  }
+
+  // 更新新闻
+  void _updateNews() async {
+    final dbHelper = DBHelper();
+    final updatedNews = News(
+      id: '1',
+      title: '更新后的测试新闻',
+      description: '这是更新后的测试新闻描述',
+      url: 'https://example.com',
+      picUrl: 'https://example.com/pic.jpg',
+      source: '更新后的新闻源',
+      ctime: '2024-11-22T10:00:00',
+    );
+    await dbHelper.updateNewsByUrl(updatedNews); // 更新新闻
+    _fetchNews(); // 更新后重新获取新闻
+  }
+
+  // 删除新闻
+  void _deleteNews() async {
+    final dbHelper = DBHelper();
+    await dbHelper.deleteNewsByUrl('https://example.com'); // 删除指定URL的新闻
+    _fetchNews(); // 删除后重新获取新闻
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('DB 操作示例'),
+      ),
+      body: Column(
+        children: [
+          ElevatedButton(
+            onPressed: _insertNews,
+            child: Text('插入新闻'),
+          ),
+          ElevatedButton(
+            onPressed: _updateNews,
+            child: Text('更新新闻'),
+          ),
+          ElevatedButton(
+            onPressed: _deleteNews,
+            child: Text('删除新闻'),
+          ),
+          Expanded(
+            child: newsList.length==0?Container():ListView.builder(
+              itemCount: newsList.length,
+              itemBuilder: (context, index) {
+                final news = newsList[index];
+                return ListTile(
+                  title: Text(news.title),
+                  subtitle: Text(news.description),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-// 插入学生信息
-Future<int> insertStudent(Map<String, dynamic> student) async {
-  final db = await database;
-  return await db.insert('students', student);
+void main() {
+  runApp(MyApp());
 }
 
-// 获取所有学生信息
-Future<List<Map<String, dynamic>>> getAllStudents() async {
-  final db = await database;
-  return await db.query('students');
-}
-
-// 更新学生信息
-Future<int> updateStudent(int id, Map<String, dynamic> student) async {
-  final db = await database;
-  return await db.update(
-    'students',
-    student,
-    where: 'id = ?',
-    whereArgs: [id],
-  );
-}
-
-// 删除学生信息
-Future<int> deleteStudent(int id) async {
-  final db = await database;
-  return await db.delete(
-    'students',
-    where: 'id = ?',
-    whereArgs: [id],
-  );
-}
-Future<void> main() async {
-// 插入学生信息
-  print("插入学生信息...");
-  int id1 = await insertStudent({
-    'name': '张三',
-    'age': 20,
-    'grade': '大一',
-  });
-  print("插入成功，学生ID: $id1");
-
-  int id2 = await insertStudent({
-    'name': '李四',
-    'age': 22,
-    'grade': '大二',
-  });
-  print("插入成功，学生ID: $id2");
-
-  // 查询所有学生信息
-  print("\n查询所有学生信息...");
-  List<Map<String, dynamic>> students = await getAllStudents();
-  students.forEach((student) {
-    print("ID: ${student['id']}, 姓名: ${student['name']}, 年龄: ${student['age']}, 年级: ${student['grade']}");
-  });
-
-  // 更新学生信息
-  print("\n更新学生信息...");
-  int updatedCount = await updateStudent(id1, {
-    'name': '张三丰',
-    'age': 21,
-    'grade': '大二',
-  });
-  print("更新完成，影响的行数: $updatedCount");
-
-  // 查询更新后的学生信息
-  print("\n查询更新后的学生信息...");
-  students = await getAllStudents();
-  students.forEach((student) {
-    print("ID: ${student['id']}, 姓名: ${student['name']}, 年龄: ${student['age']}, 年级: ${student['grade']}");
-  });
-
-  // 删除学生信息
-  print("\n删除学生信息...");
-  int deletedCount = await deleteStudent(id2);
-  print("删除完成，影响的行数: $deletedCount");
-
-  // 查询删除后的学生信息
-  print("\n查询删除后的学生信息...");
-  students = await getAllStudents();
-  students.forEach((student) {
-    print("ID: ${student['id']}, 姓名: ${student['name']}, 年龄: ${student['age']}, 年级: ${student['grade']}");
-  });
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Flutter DB Demo',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      home: DbTestPage(), // 直接设置为 DbTestPage 页面
+    );
+  }
 }
