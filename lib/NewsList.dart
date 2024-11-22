@@ -235,45 +235,46 @@ class _NewsListState extends State<NewsList> {
         color: Colors.grey,
       );
     }
-    if (_isNetworkError) {
-      // 如果网络异常，从数据库加载图片
-      return FutureBuilder<Uint8List?>(
-        future: _getImageFromDatabase(picUrl),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return CircularProgressIndicator();
-          } else if (snapshot.hasData && snapshot.data != null) {
-            logger.i("从数据库加载图片成功");
-            return Image.memory(
-              snapshot.data!,
-              fit: BoxFit.fill,
-            );
-          } else {
-            logger.w("从数据库加载图片失败");
-            return Icon(
-              Icons.broken_image,
-              size: 50,
-              color: Colors.grey,
-            );
-          }
-        },
-      );
-    } else {
       // 如果网络正常，使用 CachedNetworkImage
       return CachedNetworkImage(
         imageUrl: picUrl,
         placeholder: (context, url) => CircularProgressIndicator(),
         errorWidget: (context, url, error) {
           logger.e("加载网络图片失败，URL: $url");
-          return Icon(
-            Icons.broken_image,
-            size: 50,
-            color: Colors.grey,
-          );
+          if(_isNetworkError){
+            return FutureBuilder<Uint8List?>(
+              future: _getImageFromDatabase(picUrl),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return CircularProgressIndicator();
+                } else if (snapshot.hasData && snapshot.data != null) {
+                  logger.i("从数据库加载图片成功");
+                  return Image.memory(
+                    snapshot.data!,
+                    fit: BoxFit.fill,
+                  );
+                } else {
+                  logger.w("从数据库加载图片失败");
+                  return Icon(
+                    Icons.broken_image,
+                    size: 50,
+                    color: Colors.grey,
+                  );
+                }
+              },
+            );
+          }else{
+            return Icon(
+              Icons.broken_image,
+              size: 50,
+              color: Colors.grey,
+            );
+          }
+
         },
         fit: BoxFit.fill,
       );
-    }
+
   }
     // return  CachedNetworkImage(
     //     imageUrl: picUrl,
